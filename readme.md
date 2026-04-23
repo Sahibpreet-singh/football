@@ -223,20 +223,3 @@ If you push through this phase:
 | Scaling        | Vector indexing           |
 
 ---
-
-## 🚀 End Goal
-
-A **production-ready AI football platform** that:
-
-* Uses face login
-* Manages matches & teams
-* Scales with vector search
-* Can integrate intelligent features
-
----
-
-This file can now be used by **any AI or developer** to immediately understand:
-
-* what you're building
-* how it's structured
-* and where it's going
