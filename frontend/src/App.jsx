@@ -418,11 +418,11 @@ function AuthPage({ onNav }) {
             <>
               <div className="field fade-up fade-up-3">
                 <label className="label">Full Name</label>
-                <input value={form.name} onChange={set("name")} placeholder="John Doe" />
+                <input value={form.name} onChange={set("name")} placeholder="Your name" />
               </div>
               <div className="field fade-up fade-up-3">
                 <label className="label">Email</label>
-                <input value={form.email} onChange={set("email")} placeholder="you@example.com" type="email" />
+                <input value={form.email} onChange={set("email")} placeholder="email@example.com" type="email" />
               </div>
               <div className="field fade-up fade-up-3">
                 <label className="label">Password</label>

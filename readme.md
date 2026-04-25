@@ -223,3 +223,5 @@ If you push through this phase:
 | Scaling        | Vector indexing           |
 
 ---
+
+now we have tooo add few things too make it look great 
