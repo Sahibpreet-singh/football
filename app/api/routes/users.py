@@ -114,3 +114,32 @@ def get_me(current_user: User = Depends(get_current_user)):
         "name": current_user.name,
         "email": current_user.email
     }
+
+
+@router.post("/add-face")
+def add_face(
+    file: UploadFile = File(...),
+    db: Session      = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    For Google users who want to add face login after signing up.
+    Requires JWT token (they must already be logged in via Google).
+    """
+    if current_user.face_embedding is not None:
+        raise HTTPException(status_code=400, detail="Face already registered for this account")
+
+    file_path = f"{UPLOAD_DIR}/{file.filename}"
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    embedding = get_embedding(file_path)
+    if embedding is None:
+        raise HTTPException(status_code=400, detail="No face detected in the uploaded image")
+
+    current_user.face_embedding = embedding.tobytes()
+    db.commit()
+
+    add_embedding(current_user.id, embedding)
+
+    return {"message": "Face login enabled for your account"}
