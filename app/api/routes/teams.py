@@ -18,31 +18,6 @@ def get_db():
         db.close()
 
 
-# ── Response schemas ──────────────────────────────────────────────────────────
-
-class MemberOut(BaseModel):
-    id: int
-    user_id: int
-    user_name: str
-    role: MemberRole
-    status: MemberStatus
-
-    class Config:
-        from_attributes = True
-
-
-class TeamOut(BaseModel):
-    id: int
-    name: str
-    tag: str | None
-    color: str
-    member_count: int
-    my_role: str | None        # "admin" | "member" | "pending" | None
-
-    class Config:
-        from_attributes = True
-
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def get_my_membership(team: Team, user_id: int) -> TeamMember | None:
@@ -84,6 +59,61 @@ def list_teams(db: Session = Depends(get_db), current_user: User = Depends(get_c
     return result
 
 
+# ✅ /mine MUST be before /{team_id} — otherwise FastAPI treats "mine" as an int ID
+@router.get("/mine", summary="Get teams I'm an approved member of")
+def my_teams(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    memberships = db.query(TeamMember).filter_by(
+        user_id=current_user.id,
+        status=MemberStatus.approved
+    ).all()
+    return [
+        {
+            "id": m.team.id,
+            "name": m.team.name,
+            "tag": m.team.tag,
+            "color": m.team.color,
+            "role": m.role,
+        }
+        for m in memberships
+    ]
+
+
+@router.get("/{team_id}", summary="Get single team detail + members")
+def get_team(team_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    my_mem = get_my_membership(team, current_user.id)
+    if my_mem is None:
+        my_role = None
+    elif my_mem.status == MemberStatus.pending:
+        my_role = "pending"
+    else:
+        my_role = my_mem.role.value
+
+    i_am_admin = is_admin_of(team, current_user.id)
+    approved = [m for m in team.members if m.status == MemberStatus.approved]
+    pending  = [m for m in team.members if m.status == MemberStatus.pending]
+
+    return {
+        "id": team.id,
+        "name": team.name,
+        "tag": team.tag,
+        "color": team.color,
+        "my_role": my_role,
+        "member_count": len(approved),
+        "members": [
+            { "id": m.id, "user_id": m.user_id, "user_name": m.user.name, "role": m.role, "status": m.status }
+            for m in approved
+        ],
+        "pending_requests": [
+            { "id": m.id, "user_id": m.user_id, "user_name": m.user.name }
+            for m in pending
+        ] if i_am_admin else [],
+    }
+
+
 @router.post("/{team_id}/request-join", summary="Request to join a team")
 def request_join(team_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     team = db.query(Team).filter(Team.id == team_id).first()
@@ -98,26 +128,6 @@ def request_join(team_id: int, db: Session = Depends(get_db), current_user: User
     db.add(membership)
     db.commit()
     return {"message": "Join request sent. Waiting for admin approval."}
-
-
-@router.get("/{team_id}/members", summary="List members of a team (admin only)")
-def list_members(team_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    team = db.query(Team).filter(Team.id == team_id).first()
-    if not team:
-        raise HTTPException(status_code=404, detail="Team not found")
-    if not is_admin_of(team, current_user.id):
-        raise HTTPException(status_code=403, detail="Only team admins can view members")
-
-    return [
-        {
-            "id": m.id,
-            "user_id": m.user_id,
-            "user_name": m.user.name,
-            "role": m.role,
-            "status": m.status,
-        }
-        for m in team.members
-    ]
 
 
 @router.post("/{team_id}/approve/{user_id}", summary="Approve a join request (admin only)")
@@ -158,57 +168,21 @@ def kick_member(team_id: int, user_id: int, db: Session = Depends(get_db), curre
     return {"message": "Member removed"}
 
 
-@router.get("/{team_id}", summary="Get single team detail + members")
-def get_team(team_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("/{team_id}/members", summary="List members of a team (admin only)")
+def list_members(team_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
+    if not is_admin_of(team, current_user.id):
+        raise HTTPException(status_code=403, detail="Only team admins can view members")
 
-    my_mem = get_my_membership(team, current_user.id)
-    if my_mem is None:
-        my_role = None
-    elif my_mem.status == MemberStatus.pending:
-        my_role = "pending"
-    else:
-        my_role = my_mem.role.value
-
-    i_am_admin = is_admin_of(team, current_user.id)
-
-    approved = [m for m in team.members if m.status == MemberStatus.approved]
-    pending  = [m for m in team.members if m.status == MemberStatus.pending]
-
-    return {
-        "id": team.id,
-        "name": team.name,
-        "tag": team.tag,
-        "color": team.color,
-        "my_role": my_role,
-        "member_count": len(approved),
-        "members": [
-            { "id": m.id, "user_id": m.user_id, "user_name": m.user.name, "role": m.role, "status": m.status }
-            for m in approved
-        ],
-        # pending requests only visible to admins
-        "pending_requests": [
-            { "id": m.id, "user_id": m.user_id, "user_name": m.user.name }
-            for m in pending
-        ] if i_am_admin else [],
-    }
-
-
-@router.get("/mine", summary="Get teams I'm an approved member of")
-def my_teams(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    memberships = db.query(TeamMember).filter_by(
-        user_id=current_user.id,
-        status=MemberStatus.approved
-    ).all()
-    result = []
-    for m in memberships:
-        result.append({
-            "id": m.team.id,
-            "name": m.team.name,
-            "tag": m.team.tag,
-            "color": m.team.color,
+    return [
+        {
+            "id": m.id,
+            "user_id": m.user_id,
+            "user_name": m.user.name,
             "role": m.role,
-        })
-    return result
+            "status": m.status,
+        }
+        for m in team.members
+    ]
