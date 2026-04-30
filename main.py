@@ -5,6 +5,7 @@ from app.db.database import engine, Base, SessionLocal
 from app.db.models import user, match
 from app.api.routes import users, matches, google_auth
 from app.ml.faiss_index import load_embeddings_from_db
+from app.api.routes.teams import router as teams_router
 
 app = FastAPI(title="Football Match App", version="1.0.0")
 
@@ -18,6 +19,7 @@ app.add_middleware(
 
 app.include_router(users.router)
 app.include_router(matches.router)
+app.include_router(teams_router)
 app.include_router(google_auth.router)
 
 @app.on_event("startup")

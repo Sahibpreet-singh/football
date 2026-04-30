@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
-const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "273668627967-ge1j5lp5ohkqca4i8b95cn4qrc1fhl44.apps.googleusercontent.com";
 const API = "http://localhost:8000";
 
 const css = `
@@ -33,15 +33,16 @@ const css = `
   .fade-up-4 { animation-delay:.2s; }
   .fade-up-5 { animation-delay:.25s; }
 
-  input, button { font-family:'Outfit',sans-serif; }
+  input, button, select { font-family:'Outfit',sans-serif; }
 
-  input {
+  input, select {
     width:100%; background:var(--dark); border:1px solid var(--border);
     color:var(--white); padding:13px 16px; border-radius:10px;
     font-size:14px; outline:none; transition:border-color .2s;
   }
-  input:focus { border-color:var(--green); }
+  input:focus, select:focus { border-color:var(--green); }
   input::placeholder { color:var(--muted); }
+  select option { background:var(--dark); }
 
   .btn {
     padding:13px 24px; border-radius:10px; border:1px solid var(--border);
@@ -148,6 +149,10 @@ const css = `
   .topbar-logo-dot { width:8px; height:8px; background:var(--green); border-radius:50%; }
   .topbar-right { display:flex; align-items:center; gap:12px; }
   .topbar-user  { font-size:13px; color:var(--muted); padding:6px 14px; border:1px solid var(--border); border-radius:8px; }
+  .topbar-nav   { display:flex; gap:4px; }
+  .topbar-nav-btn { padding:7px 16px; border-radius:8px; border:none; background:transparent; color:var(--muted); font-size:13px; font-weight:500; cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; }
+  .topbar-nav-btn:hover { color:var(--white); }
+  .topbar-nav-btn.active { background:var(--card); color:var(--white); border:1px solid var(--border); }
   .dash-body    { flex:1; padding:32px 28px; }
   .dash-header  { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:28px; flex-wrap:wrap; gap:16px; }
   .dash-title   { font-family:'Bebas Neue',sans-serif; font-size:42px; letter-spacing:1px; line-height:1; }
@@ -170,6 +175,27 @@ const css = `
   .match-card-footer { display:flex; align-items:center; justify-content:space-between; padding-top:16px; border-top:1px solid var(--border); gap:8px; }
   .match-owner-tag   { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--green); }
 
+  /* ── VS row ── */
+  .vs-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .team-chip { display:flex; align-items:center; gap:6px; padding:5px 10px; border-radius:8px; border:1px solid var(--border); font-size:12px; font-weight:600; }
+  .team-chip-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .vs-label { font-size:10px; font-weight:700; color:var(--muted); letter-spacing:.1em; }
+  .team-chip-empty { border-style:dashed; color:var(--muted); }
+
+  /* ── Teams page ── */
+  .teams-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
+  .team-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:22px; transition:border-color .2s,transform .2s; animation:fadeUp .4s ease both; }
+  .team-card:hover { border-color:#333; transform:translateY(-2px); }
+  .team-card-header { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+  .team-avatar { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:16px; font-weight:700; flex-shrink:0; }
+  .team-name { font-size:16px; font-weight:600; }
+  .team-tag  { font-size:11px; color:var(--muted); margin-top:2px; font-family:'Bebas Neue',sans-serif; letter-spacing:2px; }
+  .team-members-count { font-size:13px; color:var(--muted); margin-bottom:16px; }
+  .team-role-badge { display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:4px 10px; border-radius:20px; margin-bottom:12px; }
+  .role-admin   { background:#CAFF3318; color:var(--green); border:1px solid #CAFF3330; }
+  .role-member  { background:#4488ff18; color:var(--blue);  border:1px solid #4488ff30; }
+  .role-pending { background:#FF950018; color:var(--orange);border:1px solid #FF950030; }
+
   /* ── Create ── */
   .create-layout { min-height:100vh; display:flex; flex-direction:column; }
   .create-body   { flex:1; display:flex; align-items:flex-start; justify-content:center; padding:48px 24px; }
@@ -185,6 +211,56 @@ const css = `
   .empty-state-icon  { font-size:56px; margin-bottom:16px; display:block; opacity:.4; }
   .empty-state-title { font-family:'Bebas Neue',sans-serif; font-size:28px; color:var(--white); margin-bottom:8px; letter-spacing:1px; }
 
+  /* ── Join match modal ── */
+  .modal-lg { max-width:480px; }
+  .select-team-list { display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+  .select-team-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border:1px solid var(--border); border-radius:10px; background:var(--dark); cursor:pointer; transition:border-color .15s; }
+  .select-team-item:hover { border-color:#444; }
+  .select-team-item.selected { border-color:var(--green); background:var(--green-dim); }
+  .select-team-item-name { font-size:14px; font-weight:600; }
+  .select-team-item-tag  { font-size:11px; color:var(--muted); font-family:'Bebas Neue',sans-serif; letter-spacing:2px; }
+
+  /* ── Team Detail Page ── */
+  .team-detail-layout { min-height:100vh; display:flex; flex-direction:column; }
+  .team-detail-hero {
+    background:var(--card); border-bottom:1px solid var(--border);
+    padding:36px 28px 28px; display:flex; align-items:center; gap:24px; flex-wrap:wrap;
+  }
+  .team-detail-avatar {
+    width:72px; height:72px; border-radius:16px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Bebas Neue',sans-serif; font-size:22px; flex-shrink:0;
+  }
+  .team-detail-name { font-family:'Bebas Neue',sans-serif; font-size:38px; letter-spacing:1px; line-height:1; }
+  .team-detail-tag  { font-family:'Bebas Neue',sans-serif; font-size:14px; letter-spacing:4px; color:var(--muted); margin-top:4px; }
+  .team-detail-body { flex:1; padding:28px; display:flex; flex-direction:column; gap:28px; }
+
+  .section-card { background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .section-header { padding:18px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .section-title  { font-size:13px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+  .section-badge  { background:#FF950018; color:var(--orange); border:1px solid #FF950030; font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; letter-spacing:.06em; }
+
+  .member-row { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--border); gap:12px; }
+  .member-row:last-child { border-bottom:none; }
+  .member-row-left { display:flex; align-items:center; gap:12px; }
+  .member-avatar { width:34px; height:34px; border-radius:10px; background:var(--border); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; color:var(--muted); flex-shrink:0; }
+  .member-name { font-size:14px; font-weight:500; }
+  .member-sub  { font-size:11px; color:var(--muted); margin-top:1px; }
+
+  /* ── Pending requests notification dot ── */
+  .notif-dot { width:8px; height:8px; background:var(--orange); border-radius:50%; flex-shrink:0; animation:pulse 2s infinite; }
+  .pending-count { display:inline-flex; align-items:center; justify-content:center; background:var(--orange); color:#000; font-size:10px; font-weight:800; min-width:18px; height:18px; border-radius:9px; padding:0 5px; }
+
+  /* ── Chat placeholder ── */
+  .chat-placeholder { padding:48px 20px; text-align:center; color:var(--muted); }
+  .chat-placeholder-icon { font-size:40px; margin-bottom:12px; opacity:.4; }
+  .chat-placeholder-text { font-size:13px; line-height:1.6; }
+
+  /* ── Detail tabs ── */
+  .detail-tabs { display:flex; gap:2px; padding:4px; background:var(--dark); border:1px solid var(--border); border-radius:10px; margin-bottom:20px; }
+  .detail-tab  { flex:1; padding:8px 12px; border-radius:7px; border:none; background:transparent; color:var(--muted); font-size:13px; font-weight:500; cursor:pointer; transition:all .15s; font-family:'Outfit',sans-serif; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .detail-tab.active { background:var(--card); color:var(--white); border:1px solid var(--border); }
+
   @media(max-width:768px){
     .auth-layout { grid-template-columns:1fr; }
     .auth-hero   { display:none; }
@@ -192,6 +268,7 @@ const css = `
     .dash-body   { padding:20px 16px; }
     .topbar      { padding:0 16px; }
     .face-banner { flex-direction:column; align-items:flex-start; }
+    .topbar-nav-btn span { display:none; }
   }
 `;
 
@@ -293,6 +370,16 @@ function StatusBadge({ status }) {
   return <span className={`badge badge-${status}`}>{status}</span>;
 }
 
+function TeamChip({ name, color, empty }) {
+  if (empty) return <div className="team-chip team-chip-empty">No opponent yet</div>;
+  return (
+    <div className="team-chip">
+      <div className="team-chip-dot" style={{ background: color || "#666" }} />
+      <span>{name}</span>
+    </div>
+  );
+}
+
 // ── Face Setup Modal ──────────────────────────────────────────────────────────
 function FaceSetupModal({ onClose, onSuccess }) {
   const webcam = useWebcam();
@@ -300,10 +387,7 @@ function FaceSetupModal({ onClose, onSuccess }) {
   const [msg, setMsg]         = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const capture = async () => {
-    const b = await webcam.capture();
-    setBlob(b); webcam.stop();
-  };
+  const capture = async () => { const b = await webcam.capture(); setBlob(b); webcam.stop(); };
 
   const submit = async () => {
     if (!blob) return setMsg({ type:"error", text:"Capture your face first" });
@@ -312,7 +396,6 @@ function FaceSetupModal({ onClose, onSuccess }) {
       const fd = new FormData();
       fd.append("file", blob, "face.jpg");
       await apiFetch("/users/add-face", { method:"POST", body:fd });
-      // Update local user state so banner disappears
       const u = getUser();
       setUser({ ...u, hasFace: true });
       onSuccess();
@@ -321,7 +404,6 @@ function FaceSetupModal({ onClose, onSuccess }) {
     } finally { setLoading(false); }
   };
 
-  // Stop camera when modal closes
   const close = () => { webcam.stop(); onClose(); };
 
   return (
@@ -331,16 +413,11 @@ function FaceSetupModal({ onClose, onSuccess }) {
           <div className="modal-title">Add Face Login</div>
           <button className="modal-close" onClick={close}>×</button>
         </div>
-        <p className="modal-sub">
-          Set up face recognition so you can log in instantly next time — no Google popup needed.
-        </p>
-
+        <p className="modal-sub">Set up face recognition so you can log in instantly next time.</p>
         <Toast msg={msg?.text} type={msg?.type} />
-
         <label className="label">Your Face</label>
         <CameraBox webcam={webcam} onCapture={capture} captured={!!blob} />
-
-        <button className="btn btn-orange btn-full" onClick={submit} disabled={loading}>
+        <button className="btn btn-primary btn-full" onClick={submit} disabled={loading}>
           {loading && <span className="spinner" />}
           {loading ? "Saving..." : "Enable Face Login"}
         </button>
@@ -349,42 +426,81 @@ function FaceSetupModal({ onClose, onSuccess }) {
   );
 }
 
-// ── Face Setup Banner ─────────────────────────────────────────────────────────
-function FaceSetupBanner({ onSetup }) {
+// ── Join Match Modal ──────────────────────────────────────────────────────────
+function JoinMatchModal({ match, adminTeams, onClose, onJoined }) {
+  const [selected, setSelected] = useState(null);
+  const [msg, setMsg]           = useState(null);
+  const [loading, setLoading]   = useState(false);
+
+  // filter out the requesting team
+  const eligible = adminTeams.filter(t => t.id !== match.requesting_team_id);
+
+  const submit = async () => {
+    if (!selected) return setMsg({ type:"error", text:"Select a team to join with" });
+    setLoading(true); setMsg(null);
+    try {
+      await apiFetch(`/matches/${match.id}/join`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ team_id: selected }),
+      });
+      onJoined();
+      onClose();
+    } catch(e) {
+      setMsg({ type:"error", text:e.message });
+    } finally { setLoading(false); }
+  };
+
   return (
-    <div className="face-banner">
-      <div className="face-banner-left">
-        <div className="face-banner-icon">⚡</div>
-        <div>
-          <div className="face-banner-title">Enable Face Login</div>
-          <div className="face-banner-sub">You signed in with Google. Add your face to log in instantly next time.</div>
+    <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal modal-lg">
+        <div className="modal-header">
+          <div className="modal-title">Join Match</div>
+          <button className="modal-close" onClick={onClose}>×</button>
         </div>
+        <p className="modal-sub">Select which of your teams will join <strong style={{color:"var(--white)"}}>{match.title}</strong>.</p>
+        <Toast msg={msg?.text} type={msg?.type} />
+        {eligible.length === 0 ? (
+          <p style={{ color:"var(--muted)", fontSize:13, marginBottom:20 }}>
+            None of your teams are eligible to join this match.
+          </p>
+        ) : (
+          <div className="select-team-list">
+            {eligible.map(t => (
+              <div key={t.id} className={`select-team-item ${selected===t.id?"selected":""}`} onClick={() => setSelected(t.id)}>
+                <div className="team-chip-dot" style={{ background:t.color, width:12, height:12, borderRadius:"50%", flexShrink:0 }} />
+                <div>
+                  <div className="select-team-item-name">{t.name}</div>
+                  <div className="select-team-item-tag">{t.tag}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <button className="btn btn-primary btn-full" onClick={submit} disabled={loading || eligible.length===0}>
+          {loading && <span className="spinner" />}
+          {loading ? "Joining..." : "Confirm Join"}
+        </button>
       </div>
-      <button className="btn btn-orange" style={{ flexShrink:0 }} onClick={onSetup}>
-        Set Up Now
-      </button>
     </div>
   );
 }
 
 // ── Auth Page ─────────────────────────────────────────────────────────────────
 function AuthPage({ onNav }) {
-  const [mode, setMode]       = useState("login");
-  const [form, setForm]       = useState({ name:"", email:"", password:"" });
-  const [blob, setBlob]       = useState(null);
-  const [msg, setMsg]         = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [mode, setMode]         = useState("login");
+  const [form, setForm]         = useState({ name:"", email:"", password:"" });
+  const [blob, setBlob]         = useState(null);
+  const [msg, setMsg]           = useState(null);
+  const [loading, setLoading]   = useState(false);
   const [gLoading, setGLoading] = useState(false);
-  const webcam      = useWebcam();
-  const googleReady = useGoogleScript();
-  const googleBtnRef = useRef(null);
+  const webcam                  = useWebcam();
+  const googleReady             = useGoogleScript();
+  const googleBtnRef            = useRef(null);
 
   useEffect(() => {
     if (!googleReady || !googleBtnRef.current) return;
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleGoogle,
-    });
+    window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogle });
     window.google.accounts.id.renderButton(googleBtnRef.current, {
       type:"standard", theme:"outline", size:"large", width:380,
       text: mode === "register" ? "signup_with" : "signin_with",
@@ -400,7 +516,6 @@ function AuthPage({ onNav }) {
         body: JSON.stringify({ token: response.credential }),
       });
       localStorage.setItem("token", data.access_token);
-      // Store hasFace flag so dashboard knows to show banner
       setUser({ id:data.id, name:data.name, hasFace: !data.is_new_user });
       onNav("dashboard");
     } catch(e) {
@@ -409,7 +524,6 @@ function AuthPage({ onNav }) {
   };
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
-
   const capture = async () => { const b = await webcam.capture(); setBlob(b); webcam.stop(); };
 
   const submitFace = async () => {
@@ -450,7 +564,7 @@ function AuthPage({ onNav }) {
         <div className="auth-hero-number">10</div>
         <div className="auth-hero-text">
           <div className="auth-hero-title">Find Your<br />Next Match</div>
-          <div className="auth-hero-sub">AI face recognition login. Real matches. Real players.</div>
+          <div className="auth-hero-sub">Clan-based football. Join a team, challenge others.</div>
         </div>
       </div>
 
@@ -515,66 +629,203 @@ function AuthPage({ onNav }) {
   );
 }
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
-function Dashboard({ onNav }) {
-  const [matches, setMatches]     = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [msg, setMsg]             = useState(null);
-  const [filter, setFilter]       = useState("all");
-  const [showFaceModal, setShowFaceModal] = useState(false);
-  const user = getUser();
-
-  // Show banner if user logged in via Google and hasn't set up face yet
-  const needsFaceSetup = user && user.hasFace === false;
+// ── Teams Page ────────────────────────────────────────────────────────────────
+function TeamsPage({ onNav }) {
+  const [teams, setTeams]     = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg]         = useState(null);
 
   const load = () => {
     setLoading(true);
-    apiFetch("/matches/all")
-      .then(setMatches)
+    apiFetch("/teams/")
+      .then(setTeams)
       .catch(e => setMsg({ type:"error", text:e.message }))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, []);
 
-  const join = async (id) => {
+  const requestJoin = async (teamId) => {
     try {
-      await apiFetch(`/matches/${id}/join`, { method:"POST" });
-      setMsg({ type:"success", text:"You joined the match!" });
+      const data = await apiFetch(`/teams/${teamId}/request-join`, { method:"POST" });
+      setMsg({ type:"success", text: data.message });
       load();
-    } catch(e) { setMsg({ type:"error", text:e.message }); }
+    } catch(e) {
+      setMsg({ type:"error", text:e.message });
+    }
   };
 
-  const cancel = async (id) => {
-    try {
-      await apiFetch(`/matches/${id}`, { method:"DELETE" });
-      setMsg({ type:"success", text:"Match cancelled" });
-      load();
-    } catch(e) { setMsg({ type:"error", text:e.message }); }
+  const roleBadge = (role) => {
+    if (!role) return null;
+    if (role === "pending") return <span className="team-role-badge role-pending">⏳ Pending</span>;
+    if (role === "admin")   return <span className="team-role-badge role-admin">⭐ Admin</span>;
+    return <span className="team-role-badge role-member">✓ Member</span>;
   };
 
-  const handleFaceSuccess = () => {
-    setShowFaceModal(false);
-    setMsg({ type:"success", text:"Face login enabled! You can now log in with your face." });
-  };
-
-  const filtered = filter === "all" ? matches : matches.filter(m => m.status === filter);
+  const user = getUser();
 
   return (
     <div className="dash-layout">
       <nav className="topbar">
         <div className="topbar-logo"><div className="topbar-logo-dot" />KICKOFF</div>
         <div className="topbar-right">
+          <div className="topbar-nav">
+            <button className="topbar-nav-btn" onClick={() => onNav("dashboard")}>🏟 <span>Matches</span></button>
+            <button className="topbar-nav-btn active">👥 <span>Teams</span></button>
+          </div>
           <div className="topbar-user">👤 {user?.name}</div>
-          <button className="btn btn-primary" onClick={() => onNav("create")}>+ New Match</button>
           <button className="btn btn-ghost" onClick={() => { localStorage.clear(); onNav("auth"); }}>Logout</button>
         </div>
       </nav>
 
       <div className="dash-body">
-        {/* Face setup banner — only for Google users without face */}
+        <div className="dash-header fade-up">
+          <div>
+            <div className="dash-title">ALL <span>TEAMS</span></div>
+            <div className="dash-count">{teams.length} team{teams.length !== 1 ? "s" : ""} · request to join and wait for admin approval</div>
+          </div>
+        </div>
+
+        {msg && <Toast msg={msg.text} type={msg.type} />}
+
+        {loading && (
+          <div style={{ textAlign:"center", padding:80, color:"var(--muted)" }}>
+            <span className="spinner spinner-muted" style={{ marginRight:8 }} />
+            Loading teams...
+          </div>
+        )}
+
+        <div className="teams-grid">
+          {teams.map((t, i) => (
+            <div key={t.id} className="team-card" style={{ animationDelay:`${i*0.05}s`, cursor:"pointer" }}
+              onClick={() => onNav("team", { teamId: t.id })}>
+              <div className="team-card-header">
+                <div className="team-avatar" style={{ background: t.color + "22", color: t.color }}>
+                  {t.tag || t.name.slice(0,3).toUpperCase()}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div className="team-name">{t.name}</div>
+                  {t.tag && <div className="team-tag">{t.tag}</div>}
+                </div>
+                {/* pending requests dot for admins */}
+                {t.my_role === "admin" && t.pending_count > 0 && (
+                  <span className="notif-dot" title="Pending join requests" />
+                )}
+              </div>
+              <div className="team-members-count">👥 {t.member_count} member{t.member_count !== 1 ? "s" : ""}</div>
+              {t.my_role && roleBadge(t.my_role)}
+              {!t.my_role && (
+                <button className="btn btn-primary" style={{ width:"100%", padding:"10px 0", fontSize:13 }}
+                  onClick={e => { e.stopPropagation(); requestJoin(t.id); }}>
+                  Request to Join
+                </button>
+              )}
+              {t.my_role === "pending" && (
+                <p style={{ fontSize:12, color:"var(--muted)", marginTop:8 }}>Waiting for admin to approve your request.</p>
+              )}
+              <div style={{ marginTop:12, fontSize:12, color:"var(--muted)", display:"flex", alignItems:"center", gap:4 }}>
+                View team →
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function Dashboard({ onNav }) {
+  const [matches, setMatches]       = useState([]);
+  const [adminTeams, setAdminTeams] = useState([]); // teams where current user is admin
+  const [loading, setLoading]       = useState(true);
+  const [msg, setMsg]               = useState(null);
+  const [filter, setFilter]         = useState("all");
+  const [showFaceModal, setShowFaceModal]   = useState(false);
+  const [joinModal, setJoinModal]           = useState(null); // match obj or null
+  const user = getUser();
+
+  const needsFaceSetup = user && user.hasFace === false;
+
+  const load = () => {
+    setLoading(true);
+    Promise.all([
+      apiFetch("/matches/all"),
+      apiFetch("/teams/mine"),
+    ])
+      .then(([ms, myTeams]) => {
+        setMatches(ms);
+        // mine endpoint returns approved teams; filter to ones where user is admin
+        // We need to refetch with role info — use /teams/ for that
+        return apiFetch("/teams/").then(allTeams => {
+          setAdminTeams(allTeams.filter(t => t.my_role === "admin"));
+        });
+      })
+      .catch(e => setMsg({ type:"error", text:e.message }))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const adminTeamIds = new Set(adminTeams.map(t => t.id));
+
+  const leave = async (matchId) => {
+    try {
+      await apiFetch(`/matches/${matchId}/leave`, { method:"POST" });
+      setMsg({ type:"success", text:"Your team left the match" });
+      load();
+    } catch(e) { setMsg({ type:"error", text:e.message }); }
+  };
+
+  const cancel = async (matchId) => {
+    if (!window.confirm("Cancel this match?")) return;
+    try {
+      await apiFetch(`/matches/${matchId}`, { method:"DELETE" });
+      setMsg({ type:"success", text:"Match cancelled" });
+      load();
+    } catch(e) { setMsg({ type:"error", text:e.message }); }
+  };
+
+  const filtered = filter === "all" ? matches : matches.filter(m => m.status === filter);
+
+  // Can the current user join this match?
+  const canJoin = (m) => m.status === "open" && !adminTeamIds.has(m.requesting_team_id);
+  // Can the current user leave this match?
+  const canLeave = (m) => m.status === "full" && m.opponent_team_id && adminTeamIds.has(m.opponent_team_id);
+  // Can the current user cancel this match?
+  const canCancel = (m) => m.status !== "done" && adminTeamIds.has(m.requesting_team_id);
+  // Is this match posted by a team the user admins?
+  const isMyMatch = (m) => adminTeamIds.has(m.requesting_team_id);
+
+  return (
+    <div className="dash-layout">
+      <nav className="topbar">
+        <div className="topbar-logo"><div className="topbar-logo-dot" />KICKOFF</div>
+        <div className="topbar-right">
+          <div className="topbar-nav">
+            <button className="topbar-nav-btn active">🏟 <span>Matches</span></button>
+            <button className="topbar-nav-btn" onClick={() => onNav("teams")}>👥 <span>Teams</span></button>
+          </div>
+          <div className="topbar-user">👤 {user?.name}</div>
+          {adminTeams.length > 0 && (
+            <button className="btn btn-primary" onClick={() => onNav("create")}>+ New Match</button>
+          )}
+          <button className="btn btn-ghost" onClick={() => { localStorage.clear(); onNav("auth"); }}>Logout</button>
+        </div>
+      </nav>
+
+      <div className="dash-body">
         {needsFaceSetup && (
-          <FaceSetupBanner onSetup={() => setShowFaceModal(true)} />
+          <div className="face-banner">
+            <div className="face-banner-left">
+              <div className="face-banner-icon">👤</div>
+              <div>
+                <div className="face-banner-title">Enable Face Login</div>
+                <div className="face-banner-sub">Add face recognition for instant login next time</div>
+              </div>
+            </div>
+            <button className="btn btn-orange" onClick={() => setShowFaceModal(true)}>Set Up</button>
+          </div>
         )}
 
         <div className="dash-header fade-up">
@@ -597,7 +848,7 @@ function Dashboard({ onNav }) {
         {loading && (
           <div style={{ textAlign:"center", padding:80, color:"var(--muted)" }}>
             <span className="spinner spinner-muted" style={{ marginRight:8 }} />
-            Loading matches...
+            Loading...
           </div>
         )}
 
@@ -605,8 +856,13 @@ function Dashboard({ onNav }) {
           <div className="empty-state">
             <span className="empty-state-icon">🏟️</span>
             <div className="empty-state-title">No Matches Found</div>
-            <p style={{ fontSize:14, marginBottom:24 }}>Be the first to create one.</p>
-            <button className="btn btn-primary" onClick={() => onNav("create")}>Create Match</button>
+            <p style={{ fontSize:14, marginBottom:24 }}>
+              {adminTeams.length > 0 ? "Be the first to post a match." : "Join a team first to post matches."}
+            </p>
+            {adminTeams.length > 0
+              ? <button className="btn btn-primary" onClick={() => onNav("create")}>Post Match Request</button>
+              : <button className="btn btn-primary" onClick={() => onNav("teams")}>Browse Teams</button>
+            }
           </div>
         )}
 
@@ -617,19 +873,37 @@ function Dashboard({ onNav }) {
                 <div className="match-card-title">{m.title}</div>
                 <StatusBadge status={m.status} />
               </div>
+
+              {/* Teams VS row */}
+              <div className="vs-row">
+                <TeamChip name={m.requesting_team_name} color={m.requesting_team_color} />
+                <span className="vs-label">VS</span>
+                {m.opponent_team_id
+                  ? <TeamChip name={m.opponent_team_name} color={m.opponent_team_color} />
+                  : <TeamChip empty />
+                }
+              </div>
+
               <div className="match-meta">
                 <div className="match-meta-row"><span className="match-meta-icon">📍</span><span>{m.location}</span></div>
                 <div className="match-meta-row"><span className="match-meta-icon">🗓</span><span>{new Date(m.scheduled_at).toLocaleString(undefined,{dateStyle:"medium",timeStyle:"short"})}</span></div>
                 <div className="match-meta-row"><span className="match-meta-icon">👥</span><span>{m.slots} players</span></div>
               </div>
+
               <div className="match-card-footer">
-                {m.creator_id === user?.id ? <span className="match-owner-tag">Your match</span> : <span />}
+                {isMyMatch(m) ? <span className="match-owner-tag">Your match</span> : <span />}
                 <div style={{ display:"flex", gap:8 }}>
-                  {m.status === "open" && m.creator_id !== user?.id && (
-                    <button className="btn btn-primary" style={{ padding:"8px 18px", fontSize:13 }} onClick={() => join(m.id)}>Join</button>
+                  {canJoin(m) && adminTeams.length > 0 && (
+                    <button className="btn btn-primary" style={{ padding:"8px 18px", fontSize:13 }}
+                      onClick={() => setJoinModal(m)}>Join</button>
                   )}
-                  {m.creator_id === user?.id && m.status === "open" && (
-                    <button className="btn btn-danger" style={{ padding:"8px 18px", fontSize:13 }} onClick={() => cancel(m.id)}>Cancel</button>
+                  {canLeave(m) && (
+                    <button className="btn btn-danger" style={{ padding:"8px 18px", fontSize:13 }}
+                      onClick={() => leave(m.id)}>Leave</button>
+                  )}
+                  {canCancel(m) && (
+                    <button className="btn btn-danger" style={{ padding:"8px 18px", fontSize:13 }}
+                      onClick={() => cancel(m.id)}>Cancel</button>
                   )}
                 </div>
               </div>
@@ -641,7 +915,16 @@ function Dashboard({ onNav }) {
       {showFaceModal && (
         <FaceSetupModal
           onClose={() => setShowFaceModal(false)}
-          onSuccess={handleFaceSuccess}
+          onSuccess={() => { setShowFaceModal(false); setMsg({ type:"success", text:"Face login enabled!" }); }}
+        />
+      )}
+
+      {joinModal && (
+        <JoinMatchModal
+          match={joinModal}
+          adminTeams={adminTeams}
+          onClose={() => setJoinModal(null)}
+          onJoined={() => { load(); setMsg({ type:"success", text:"Your team joined the match!" }); }}
         />
       )}
     </div>
@@ -650,20 +933,32 @@ function Dashboard({ onNav }) {
 
 // ── Create Match ──────────────────────────────────────────────────────────────
 function CreateMatch({ onNav }) {
-  const [form, setForm]       = useState({ title:"", location:"", scheduled_at:"", slots:"10" });
+  const [form, setForm]       = useState({ title:"", location:"", scheduled_at:"", slots:"10", requesting_team_id:"" });
+  const [adminTeams, setAdminTeams] = useState([]);
   const [msg, setMsg]         = useState(null);
   const [loading, setLoading] = useState(false);
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
+  useEffect(() => {
+    // Load teams where user is admin
+    apiFetch("/teams/")
+      .then(teams => {
+        const mine = teams.filter(t => t.my_role === "admin");
+        setAdminTeams(mine);
+        if (mine.length === 1) setForm(f => ({ ...f, requesting_team_id: String(mine[0].id) }));
+      })
+      .catch(() => {});
+  }, []);
+
   const submit = async () => {
-    if (!form.title || !form.location || !form.scheduled_at)
-      return setMsg({ type:"error", text:"Fill in all fields" });
+    if (!form.title || !form.location || !form.scheduled_at || !form.requesting_team_id)
+      return setMsg({ type:"error", text:"Fill in all fields and select your team" });
     setLoading(true); setMsg(null);
     try {
       await apiFetch("/matches/", {
         method:"POST",
         headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ ...form, slots: Number(form.slots) }),
+        body: JSON.stringify({ ...form, slots: Number(form.slots), requesting_team_id: Number(form.requesting_team_id) }),
       });
       onNav("dashboard");
     } catch(e) {
@@ -679,9 +974,24 @@ function CreateMatch({ onNav }) {
       </nav>
       <div className="create-body">
         <div className="create-card fade-up">
-          <div className="create-title">New Match</div>
-          <div className="create-sub">Set up your match and wait for a team to join.</div>
+          <div className="create-title">Post Match Request</div>
+          <div className="create-sub">Your team is looking for an opponent. Other team admins can join.</div>
           <Toast msg={msg?.text} type={msg?.type} />
+
+          <div className="field">
+            <label className="label">Posting as Team</label>
+            {adminTeams.length === 0 ? (
+              <p style={{ fontSize:13, color:"var(--muted)" }}>You're not an admin of any team. Join a team first.</p>
+            ) : (
+              <select value={form.requesting_team_id} onChange={set("requesting_team_id")}>
+                <option value="">Select your team…</option>
+                {adminTeams.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
           <div className="field">
             <label className="label">Match Title</label>
             <input value={form.title} onChange={set("title")} placeholder="Sunday 5v5 · Central Park" />
@@ -700,9 +1010,9 @@ function CreateMatch({ onNav }) {
               <input value={form.slots} onChange={set("slots")} type="number" min={2} max={22} />
             </div>
           </div>
-          <button className="btn btn-primary btn-full" onClick={submit} disabled={loading} style={{ marginTop:8 }}>
+          <button className="btn btn-primary btn-full" onClick={submit} disabled={loading || adminTeams.length===0} style={{ marginTop:8 }}>
             {loading && <span className="spinner" />}
-            {loading ? "Creating..." : "Create Match"}
+            {loading ? "Posting..." : "Post Match Request"}
           </button>
         </div>
       </div>
@@ -710,15 +1020,206 @@ function CreateMatch({ onNav }) {
   );
 }
 
+// ── Team Detail Page ──────────────────────────────────────────────────────────
+function TeamDetail({ teamId, onNav }) {
+  const [team, setTeam]     = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg]       = useState(null);
+  const [tab, setTab]       = useState("members"); // members | chat
+  const user = getUser();
+
+  const load = () => {
+    setLoading(true);
+    apiFetch(`/teams/${teamId}`)
+      .then(setTeam)
+      .catch(e => setMsg({ type:"error", text:e.message }))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [teamId]);
+
+  const approve = async (userId) => {
+    try {
+      await apiFetch(`/teams/${teamId}/approve/${userId}`, { method:"POST" });
+      setMsg({ type:"success", text:"Member approved!" });
+      load();
+    } catch(e) { setMsg({ type:"error", text:e.message }); }
+  };
+
+  const kick = async (userId) => {
+    if (!window.confirm("Remove this member?")) return;
+    try {
+      await apiFetch(`/teams/${teamId}/kick/${userId}`, { method:"DELETE" });
+      setMsg({ type:"success", text:"Member removed." });
+      load();
+    } catch(e) { setMsg({ type:"error", text:e.message }); }
+  };
+
+  const isAdmin = team?.my_role === "admin";
+  const pendingCount = team?.pending_requests?.length || 0;
+
+  return (
+    <div className="team-detail-layout">
+      <nav className="topbar">
+        <div className="topbar-logo"><div className="topbar-logo-dot" />KICKOFF</div>
+        <div className="topbar-right">
+          <div className="topbar-nav">
+            <button className="topbar-nav-btn" onClick={() => onNav("dashboard")}>🏟 <span>Matches</span></button>
+            <button className="topbar-nav-btn" onClick={() => onNav("teams")}>👥 <span>Teams</span></button>
+          </div>
+          <div className="topbar-user">👤 {user?.name}</div>
+          <button className="btn btn-ghost" onClick={() => { localStorage.clear(); onNav("auth"); }}>Logout</button>
+        </div>
+      </nav>
+
+      {loading && (
+        <div style={{ textAlign:"center", padding:80, color:"var(--muted)" }}>
+          <span className="spinner spinner-muted" style={{ marginRight:8 }} />
+          Loading team...
+        </div>
+      )}
+
+      {!loading && team && (
+        <>
+          {/* Hero */}
+          <div className="team-detail-hero fade-up">
+            <div className="team-detail-avatar"
+              style={{ background: team.color + "22", color: team.color }}>
+              {team.tag || team.name.slice(0,3).toUpperCase()}
+            </div>
+            <div style={{ flex:1 }}>
+              <div className="team-detail-name">{team.name}</div>
+              {team.tag && <div className="team-detail-tag">{team.tag}</div>}
+              <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
+                <span style={{ fontSize:13, color:"var(--muted)" }}>👥 {team.member_count} member{team.member_count!==1?"s":""}</span>
+                {team.my_role && (
+                  <span className={`team-role-badge ${
+                    team.my_role==="admin" ? "role-admin" :
+                    team.my_role==="pending" ? "role-pending" : "role-member"
+                  }`} style={{ margin:0 }}>
+                    {team.my_role==="admin" ? "⭐ Admin" : team.my_role==="pending" ? "⏳ Pending" : "✓ Member"}
+                  </span>
+                )}
+                {isAdmin && pendingCount > 0 && (
+                  <span style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:13, color:"var(--orange)" }}>
+                    <span className="notif-dot" />
+                    {pendingCount} pending request{pendingCount!==1?"s":""}
+                  </span>
+                )}
+              </div>
+            </div>
+            {isAdmin && (
+              <button className="btn btn-primary" onClick={() => onNav("create")}>+ Post Match</button>
+            )}
+          </div>
+
+          <div className="team-detail-body">
+            {msg && <Toast msg={msg.text} type={msg.type} />}
+
+            {/* Pending Requests — admin only, always shown at top if any */}
+            {isAdmin && pendingCount > 0 && (
+              <div className="section-card fade-up">
+                <div className="section-header">
+                  <span className="section-title">Join Requests</span>
+                  <span className="section-badge">{pendingCount} pending</span>
+                </div>
+                {team.pending_requests.map(r => (
+                  <div key={r.id} className="member-row">
+                    <div className="member-row-left">
+                      <div className="member-avatar">{r.user_name[0].toUpperCase()}</div>
+                      <div>
+                        <div className="member-name">{r.user_name}</div>
+                        <div className="member-sub">Wants to join</div>
+                      </div>
+                    </div>
+                    <div style={{ display:"flex", gap:8 }}>
+                      <button className="btn btn-primary" style={{ padding:"7px 16px", fontSize:12 }}
+                        onClick={() => approve(r.user_id)}>Approve</button>
+                      <button className="btn btn-danger" style={{ padding:"7px 16px", fontSize:12 }}
+                        onClick={() => kick(r.user_id)}>Decline</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Tabs: Members | Chat */}
+            <div>
+              <div className="detail-tabs">
+                <button className={`detail-tab ${tab==="members"?"active":""}`} onClick={() => setTab("members")}>
+                  👥 Members <span style={{ fontSize:11, color:"var(--muted)" }}>({team.member_count})</span>
+                </button>
+                <button className={`detail-tab ${tab==="chat"?"active":""}`} onClick={() => setTab("chat")}>
+                  💬 Team Chat
+                </button>
+              </div>
+
+              {tab === "members" && (
+                <div className="section-card">
+                  {team.members.length === 0 && (
+                    <div style={{ padding:"32px 20px", textAlign:"center", color:"var(--muted)", fontSize:13 }}>
+                      No approved members yet.
+                    </div>
+                  )}
+                  {team.members.map(m => (
+                    <div key={m.id} className="member-row">
+                      <div className="member-row-left">
+                        <div className="member-avatar">{m.user_name[0].toUpperCase()}</div>
+                        <div>
+                          <div className="member-name">{m.user_name}</div>
+                          <div className="member-sub">{m.role === "admin" ? "⭐ Admin" : "Member"}</div>
+                        </div>
+                      </div>
+                      {isAdmin && m.user_id !== user.id && (
+                        <button className="btn btn-danger" style={{ padding:"6px 14px", fontSize:12 }}
+                          onClick={() => kick(m.user_id)}>Remove</button>
+                      )}
+                      {m.user_id === user.id && (
+                        <span style={{ fontSize:11, color:"var(--muted)" }}>You</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {tab === "chat" && (
+                <div className="section-card">
+                  <div className="chat-placeholder">
+                    <div className="chat-placeholder-icon">💬</div>
+                    <div style={{ fontSize:15, fontWeight:600, color:"var(--white)", marginBottom:8 }}>Team Chat Coming Soon</div>
+                    <div className="chat-placeholder-text">
+                      Real-time team chat will be available here.<br />
+                      Members will be able to coordinate matches and strategy.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [page, setPage] = useState(getToken() ? "dashboard" : "auth");
+  const [page, setPage]       = useState(getToken() ? "dashboard" : "auth");
+  const [teamId, setTeamId]   = useState(null);
+
+  const navigate = (p, extra) => {
+    if (p === "team" && extra?.teamId) setTeamId(extra.teamId);
+    setPage(p);
+  };
+
   return (
     <>
       <style>{css}</style>
-      {page === "auth"      && <AuthPage    onNav={setPage} />}
-      {page === "dashboard" && <Dashboard   onNav={setPage} />}
-      {page === "create"    && <CreateMatch onNav={setPage} />}
+      {page === "auth"       && <AuthPage    onNav={navigate} />}
+      {page === "dashboard"  && <Dashboard   onNav={navigate} />}
+      {page === "create"     && <CreateMatch onNav={navigate} />}
+      {page === "teams"      && <TeamsPage   onNav={navigate} />}
+      {page === "team"       && <TeamDetail  teamId={teamId} onNav={navigate} />}
     </>
   );
 }
