@@ -251,10 +251,28 @@ const css = `
   .notif-dot { width:8px; height:8px; background:var(--orange); border-radius:50%; flex-shrink:0; animation:pulse 2s infinite; }
   .pending-count { display:inline-flex; align-items:center; justify-content:center; background:var(--orange); color:#000; font-size:10px; font-weight:800; min-width:18px; height:18px; border-radius:9px; padding:0 5px; }
 
-  /* ── Chat placeholder ── */
-  .chat-placeholder { padding:48px 20px; text-align:center; color:var(--muted); }
-  .chat-placeholder-icon { font-size:40px; margin-bottom:12px; opacity:.4; }
-  .chat-placeholder-text { font-size:13px; line-height:1.6; }
+  /* ── Chat ── */
+  .chat-wrap        { display:flex; flex-direction:column; height:520px; }
+  .chat-messages    { flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:10px; }
+  .chat-msg         { display:flex; gap:10px; align-items:flex-start; animation:fadeUp .2s ease both; }
+  .chat-msg.mine    { flex-direction:row-reverse; }
+  .chat-msg-avatar  { width:30px; height:30px; border-radius:8px; background:var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:var(--muted); flex-shrink:0; }
+  .chat-msg-body    { max-width:68%; }
+  .chat-msg.mine .chat-msg-body { align-items:flex-end; display:flex; flex-direction:column; }
+  .chat-msg-name    { font-size:10px; color:var(--muted); margin-bottom:3px; font-weight:600; letter-spacing:.04em; }
+  .chat-msg-bubble  { background:var(--dark); border:1px solid var(--border); border-radius:12px; border-top-left-radius:3px; padding:9px 13px; font-size:13px; line-height:1.5; word-break:break-word; }
+  .chat-msg.mine .chat-msg-bubble { background:var(--green-dim); border-color:#CAFF3330; border-top-left-radius:12px; border-top-right-radius:3px; color:var(--green); }
+  .chat-msg-time    { font-size:10px; color:var(--muted); margin-top:3px; }
+  .chat-system-msg  { text-align:center; font-size:11px; color:var(--muted); padding:4px 0; }
+  .chat-input-row   { display:flex; gap:8px; padding:12px 16px; border-top:1px solid var(--border); }
+  .chat-input       { flex:1; background:var(--dark); border:1px solid var(--border); color:var(--white); padding:10px 14px; border-radius:10px; font-size:13px; outline:none; transition:border-color .2s; resize:none; height:42px; font-family:'Outfit',sans-serif; }
+  .chat-input:focus { border-color:var(--green); }
+  .chat-online      { padding:8px 20px; border-bottom:1px solid var(--border); font-size:11px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .chat-online-dot  { width:6px; height:6px; background:#44ff88; border-radius:50%; }
+  .chat-send        { padding:0 16px; height:42px; border-radius:10px; border:1px solid var(--green); background:var(--green); color:var(--black); font-weight:700; font-size:13px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+  .chat-send:hover  { background:#d4ff44; }
+  .chat-send:disabled { opacity:.4; cursor:not-allowed; }
+  .chat-connecting  { padding:48px 20px; text-align:center; color:var(--muted); font-size:13px; }
 
   /* ── Detail tabs ── */
   .detail-tabs { display:flex; gap:2px; padding:4px; background:var(--dark); border:1px solid var(--border); border-radius:10px; margin-bottom:20px; }
@@ -1020,6 +1038,138 @@ function CreateMatch({ onNav }) {
   );
 }
 
+// ── Team Chat Component ───────────────────────────────────────────────────────
+const WS_BASE = "ws://localhost:8000";
+
+function TeamChat({ teamId }) {
+  const [messages, setMessages]   = useState([]);
+  const [input, setInput]         = useState("");
+  const [online, setOnline]       = useState([]);
+  const [status, setStatus]       = useState("connecting"); // connecting | open | closed
+  const wsRef      = useRef(null);
+  const bottomRef  = useRef(null);
+  const user       = getUser();
+  const token      = getToken();
+
+  // Load history then open WebSocket
+  useEffect(() => {
+    let ws;
+    let cancelled = false;
+
+    const init = async () => {
+      // 1. Fetch message history via REST
+      try {
+        const history = await apiFetch(`/teams/${teamId}/messages?token=${token}`);
+        if (!cancelled) setMessages(history.map(m => ({ ...m, type: "message" })));
+      } catch { /* non-fatal */ }
+
+      if (cancelled) return;
+
+      // 2. Open WebSocket
+      ws = new WebSocket(`${WS_BASE}/ws/teams/${teamId}/chat?token=${token}`);
+      wsRef.current = ws;
+
+      ws.onopen  = () => { if (!cancelled) setStatus("open"); };
+      ws.onclose = () => { if (!cancelled) setStatus("closed"); };
+      ws.onerror = () => { if (!cancelled) setStatus("closed"); };
+
+      ws.onmessage = (e) => {
+        if (cancelled) return;
+        const data = JSON.parse(e.data);
+        if (data.type === "system") {
+          setOnline(data.online || []);
+          setMessages(prev => [...prev, { type: "system", content: data.content, id: Date.now() }]);
+        } else if (data.type === "message") {
+          setMessages(prev => [...prev, data]);
+        }
+      };
+    };
+
+    init();
+    return () => {
+      cancelled = true;
+      ws?.close();
+    };
+  }, [teamId]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const send = () => {
+    const content = input.trim();
+    if (!content || wsRef.current?.readyState !== WebSocket.OPEN) return;
+    wsRef.current.send(JSON.stringify({ content }));
+    setInput("");
+  };
+
+  const onKey = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+  };
+
+  const fmt = (iso) => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+
+  return (
+    <div className="section-card">
+      {/* Online indicator */}
+      <div className="chat-online">
+        <span className="chat-online-dot" />
+        {status === "connecting" && "Connecting..."}
+        {status === "closed"     && "Disconnected — refresh to reconnect"}
+        {status === "open"       && (online.length > 0
+          ? `${online.length} online: ${online.join(", ")}`
+          : "Connected"
+        )}
+      </div>
+
+      {/* Messages */}
+      <div className="chat-messages">
+        {messages.length === 0 && status === "open" && (
+          <div style={{ textAlign:"center", color:"var(--muted)", fontSize:13, marginTop:32 }}>
+            No messages yet. Say hello!
+          </div>
+        )}
+        {messages.map((m, i) => {
+          if (m.type === "system") return (
+            <div key={m.id || i} className="chat-system-msg">{m.content}</div>
+          );
+          const mine = m.user_id === user?.id;
+          return (
+            <div key={m.id || i} className={`chat-msg${mine ? " mine" : ""}`}>
+              <div className="chat-msg-avatar">{(m.user_name || "?")[0].toUpperCase()}</div>
+              <div className="chat-msg-body">
+                {!mine && <div className="chat-msg-name">{m.user_name}</div>}
+                <div className="chat-msg-bubble">{m.content}</div>
+                {m.created_at && <div className="chat-msg-time">{fmt(m.created_at)}</div>}
+              </div>
+            </div>
+          );
+        })}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div className="chat-input-row">
+        <textarea
+          className="chat-input"
+          placeholder={status === "open" ? "Send a message..." : "Not connected"}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={onKey}
+          disabled={status !== "open"}
+        />
+        <button className="chat-send" onClick={send} disabled={status !== "open" || !input.trim()}>
+          Send
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Team Detail Page ──────────────────────────────────────────────────────────
 function TeamDetail({ teamId, onNav }) {
   const [team, setTeam]     = useState(null);
@@ -1182,18 +1332,7 @@ function TeamDetail({ teamId, onNav }) {
                 </div>
               )}
 
-              {tab === "chat" && (
-                <div className="section-card">
-                  <div className="chat-placeholder">
-                    <div className="chat-placeholder-icon">💬</div>
-                    <div style={{ fontSize:15, fontWeight:600, color:"var(--white)", marginBottom:8 }}>Team Chat Coming Soon</div>
-                    <div className="chat-placeholder-text">
-                      Real-time team chat will be available here.<br />
-                      Members will be able to coordinate matches and strategy.
-                    </div>
-                  </div>
-                </div>
-              )}
+              {tab === "chat" && <TeamChat teamId={teamId} />}
             </div>
           </div>
         </>
