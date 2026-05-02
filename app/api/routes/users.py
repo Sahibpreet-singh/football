@@ -4,7 +4,7 @@ import bcrypt
 
 from app.db.database import SessionLocal
 from app.db.models.user import User
-from app.ml.faiss_index import search_embedding, add_embedding
+from app.ml.chroma_index import search_embedding, add_embedding
 from app.ml.model import get_embedding
 from app.core.auth import create_access_token, get_current_user
 
