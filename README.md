@@ -1,142 +1,118 @@
-# 🚀 AI-Powered Football Match Platform
+# 🚀 AI Football Matchmaking Platform
 
-## 📌 Overview
+## ⚡ Overview
+A production-focused, AI-powered football matchmaking platform that enables users to create and join matches with face recognition–based authentication.
 
-An AI-powered, full-stack football match platform that enables users to create and join matches, with **face recognition-based authentication**.
-
-This project is designed as a **production-oriented system** combining backend engineering, database design, and applied AI.
-
----
-
-## ✨ Key Features
-
-### 🧑‍💻 Authentication
-- Face recognition–based login
-- Image → embedding → similarity matching pipeline
-
-### ⚽ Match System
-- Create football matches
-- Join existing matches (one-team-per-match constraint)
-- Match lifecycle managed via relational database
-
-### 🧠 AI Layer
-- Face embedding generation
-- Cosine similarity for identity matching
-- Planned FAISS integration for scalable vector search
-
-### 🗄️ Database System
-- Structured MySQL schema
-- Relational design for users, matches, and participation
+Built to demonstrate real-world backend systems, AI integration, and scalable architecture design.
 
 ---
 
-## 🏗️ System Architecture
+## 🔥 Core Features
 
-```
-Frontend (React - planned)
+### 🧑‍💻 Smart Authentication
+- Face recognition login (embedding-based)
+- Secure identity verification using similarity matching
+
+### ⚽ Matchmaking System
+- Create and join football matches
+- One-team-per-match constraint enforcement
+- Structured match lifecycle management
+
+### 🧠 AI Engine
+- Face embedding generation pipeline
+- Cosine similarity-based identity matching
+- FAISS (planned) for scalable vector search
+
+### 🗄️ Database Design
+- Relational schema using MySQL
+- Optimized structure for users, matches, and participation
+
+---
+
+## 🏗️ Architecture
+
+Frontend (React - Planned)
         ↓
 FastAPI Backend
         ↓
-AI Layer (Face Embeddings + Similarity Search)
+AI Engine (Embeddings + Similarity Search)
         ↓
-MySQL Database (Persistent Storage)
+MySQL Database
         ↓
 FAISS Vector Index (Planned)
-```
 
 ---
 
 ## 🧠 AI Pipeline
 
-### 1. Face Authentication Pipeline
-```
-Image Input → Face Detection → Embedding Generation → Similarity Search → User Verification
-```
+Face Authentication:
+Image → Face Detection → Embedding → Similarity Matching → Verification
 
-### 2. Future Match Intelligence Pipeline
-```
-Player Data → Skill Estimation → Match Recommendation → Smart Matching
-```
-
----
-
-## 🗄️ Database Configuration
-
-```python
-DATABASE_URL = "mysql+pymysql://root:password@localhost:3306/football_schema"
-```
-
-### Breakdown:
-- mysql+pymysql → SQLAlchemy MySQL driver  
-- root:password → credentials  
-- localhost:3306 → server config  
-- football_schema → database name  
+Future Intelligence Layer:
+Player Data → Skill Analysis → Match Recommendation → Smart Pairing
 
 ---
 
 ## ⚙️ Tech Stack
 
-### Backend
+Backend:
 - FastAPI
 - Python
 
-### Database
+Database:
 - MySQL
 - SQLAlchemy ORM
 
-### AI / ML
-- Face Recognition Embeddings
+AI / ML:
+- Face Embeddings
 - Cosine Similarity
-- FAISS (planned)
+- FAISS (Upcoming)
 
-### Future
-- React frontend
-- LLM-based assistant system
+Frontend (Planned):
+- React
 
 ---
 
-## 📊 Current Status
+## 📊 Project Status
 
-### ✅ Completed
-- Project architecture design
-- FastAPI setup
-- Basic face embedding pipeline
-- Initial MySQL connection setup
+Completed:
+- Backend architecture setup (FastAPI)
+- Initial AI embedding pipeline
+- Database connectivity
 
-### ⚠️ In Progress
+In Progress:
+- Match APIs (create/join system)
 - Database schema implementation
-- Match creation/join APIs
 - Embedding storage optimization
 
-### 🚧 Upcoming
-- FAISS integration for vector search
+Upcoming:
+- FAISS integration
 - Full authentication system
-- React frontend dashboard
-- AI recommendation system
-
----
-
-## 🔥 Why This Project Matters
-
-This project demonstrates:
-- System design thinking
-- AI integration in backend systems
-- Database design skills
-- Scalable architecture planning
+- React dashboard
+- AI-based match recommendations
 
 ---
 
 ## 📦 Roadmap
 
-- Replace in-memory storage with MySQL persistence
-- Integrate FAISS for fast similarity search
-- Add JWT-based authentication
-- Build React frontend dashboard
-- Add AI match recommendation engine
-- Integrate LLM assistant
+- Persistent storage using MySQL
+- Vector search with FAISS
+- JWT-based authentication
+- Full frontend dashboard (React)
+- AI-powered matchmaking engine
+- LLM-based assistant integration
+
+---
+
+## 💡 Why This Project Stands Out
+
+- Combines AI + Backend Engineering
+- Demonstrates real-world system design
+- Focuses on scalability and production readiness
+- Goes beyond CRUD into intelligent systems
 
 ---
 
 ## 📌 Status
 
-🚧 Active Development — Core AI + Backend Phase
+Actively under development (AI + Backend Phase)
