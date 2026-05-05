@@ -1,15 +1,18 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+from dotenv import load_dotenv
 
 from app.db.database import SessionLocal
 from app.db.models.user import User
 from app.core.auth import create_access_token
 
-# ⚠️ Replace this with your actual Google Client ID from console.cloud.google.com
-GOOGLE_CLIENT_ID = "273668627967-ge1j5lp5ohkqca4i8b95cn4qrc1fhl44.apps.googleusercontent.com"
+load_dotenv()
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 router = APIRouter(prefix="/auth", tags=["OAuth"])
 
@@ -23,19 +26,12 @@ def get_db():
 
 
 class GoogleTokenRequest(BaseModel):
-    token: str   # The ID token sent from the frontend after Google Sign-In
+    token: str
 
 
 @router.post("/google")
 def google_login(payload: GoogleTokenRequest, db: Session = Depends(get_db)):
-    """
-    Frontend sends the Google ID token after the user signs in with Google.
-    We verify it with Google, then either:
-      - Find existing user by email → return JWT
-      - Create new user from Google profile → return JWT
-    """
     try:
-        # Verify the token is genuinely from Google
         info = id_token.verify_oauth2_token(
             payload.token,
             google_requests.Request(),
@@ -50,15 +46,13 @@ def google_login(payload: GoogleTokenRequest, db: Session = Depends(get_db)):
     if not email:
         raise HTTPException(status_code=400, detail="Google account has no email")
 
-    # Find or create user
     user = db.query(User).filter(User.email == email).first()
 
     if not user:
-        # New user — create account from Google profile (no password, no face yet)
         user = User(
             name=name,
             email=email,
-            password="GOOGLE_AUTH",   # placeholder — they never use password login
+            password="GOOGLE_AUTH",
             face_embedding=None
         )
         db.add(user)
@@ -74,5 +68,5 @@ def google_login(payload: GoogleTokenRequest, db: Session = Depends(get_db)):
         "email": user.email,
         "access_token": token,
         "token_type": "bearer",
-        "is_new_user": user.face_embedding is None  # hint to frontend to prompt face setup
+        "is_new_user": user.face_embedding is None
     }
