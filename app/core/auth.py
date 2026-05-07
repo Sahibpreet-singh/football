@@ -11,8 +11,8 @@ from app.db.models.user import User
 
 load_dotenv()
 
-SECRET_KEY                 = os.getenv("JWT_SECRET", "fallback-secret-change-me")
-ALGORITHM                  = os.getenv("JWT_ALGORITHM", "HS256")
+SECRET_KEY = os.getenv("JWT_SECRET", "fallback-secret-change-me")
+ALGORITHM  = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 1440))
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login-face")
